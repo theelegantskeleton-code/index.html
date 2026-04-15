@@ -1,196 +1,191 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Prescript Device</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Index - Neon Final Fix</title>
+    <style>
+        body {
+            background-color: #010205;
+            color: #00d9ff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            text-shadow: 0 0 10px #00d9ff, 0 0 25px #0055ff;
+        }
 
-<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans&display=swap" rel="stylesheet">
+        #display-area {
+            text-align: center;
+            width: 95%;
+        }
 
-<style>
-/* Carregando a fonte enviada */
-@font-face {
-    font-family: 'IndexDevice';
-    src: url('Index Device.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-}
+        #output {
+            font-size: 3.5rem;
+            font-weight: 900;
+            letter-spacing: 6px;
+            min-height: 1.2em;
+            word-break: break-all;
+            text-transform: uppercase;
+        }
 
-body {
-  background: black;
-  color: #00aaff;
-  /* Aplicando a nova fonte como principal */
-  font-family: 'IndexDevice', 'Pixelify Sans', monospace;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  margin: 0;
-  overflow: hidden;
-}
+        @media (max-width: 600px) {
+            #output {
+                font-size: 1.8rem;
+                letter-spacing: 2px;
+            }
+            input {
+                width: 80% !important;
+            }
+        }
 
-.container {
-  width: 90%;
-  max-width: 360px;
-  height: 200px;
-  border: 2px solid #00aaff;
-  padding: 15px;
-  box-shadow: 0 0 25px #00aaff;
-  position: relative;
-  overflow-y: auto;
-  margin-bottom: 15px;
-  background: rgba(0, 20, 40, 0.2);
-}
+        #input-container {
+            position: fixed;
+            bottom: 60px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
 
-#text {
-  white-space: pre-wrap;
-  font-size: 20px; /* Aumentado levemente para melhor leitura da fonte Index */
-  line-height: 1.4;
-  letter-spacing: 1px;
-}
+        input {
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid #00d9ff;
+            color: #00d9ff;
+            font-size: 1rem;
+            padding: 10px;
+            width: 350px;
+            text-align: center;
+            outline: none;
+            font-family: monospace;
+            opacity: 0.5;
+            transition: 0.3s;
+        }
 
-#text::after {
-  content: "_";
-  animation: blink 0.8s infinite;
-  margin-left: 2px;
-}
+        input:focus { opacity: 1; width: 400px; }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-
-input {
-  width: 85%;
-  max-width: 360px;
-  padding: 12px;
-  background: black;
-  border: 1px solid #00aaff;
-  color: #00aaff;
-  font-family: 'IndexDevice', 'Pixelify Sans', monospace;
-  margin-bottom: 10px;
-  outline: none;
-}
-
-button {
-  padding: 10px 25px;
-  background: #00aaff;
-  border: none;
-  color: black;
-  font-family: 'IndexDevice', sans-serif;
-  font-weight: bold;
-  cursor: pointer;
-  transition: 0.3s;
-}
-
-button:hover {
-  background: #0088cc;
-  box-shadow: 0 0 10px #00aaff;
-}
-</style>
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%),
+                        linear-gradient(90deg, rgba(0, 0, 255, 0.05), rgba(0, 255, 255, 0.02));
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+    </style>
 </head>
 <body>
+    <div class="overlay"></div>
+    
+    <div id="display-area">
+        <div id="output">SISTEMA PRONTO.</div>
+    </div>
 
-<div class="container" id="container">
-  <div id="text"></div>
-</div>
+    <div id="input-container">
+        <input type="text" id="userInput" placeholder="DIGITE O PRECEITO" autocomplete="off" autofocus>
+    </div>
 
-<input type="text" id="inputText" placeholder="Digite seu Prescript..." autocomplete="off">
-<button onclick="start()">EXECUTAR</button>
+    <script>
+        const outputElement = document.getElementById('output');
+        const inputElement = document.getElementById('userInput');
+        
+        // Configuração de Web Audio para Loop Perfeito
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let scrambleSource = null;
+        let scrambleBuffer = null;
 
-<script>
-let output = document.getElementById("text");
-let container = document.getElementById("container");
+        // Carrega o áudio 1 em buffer para evitar gaps
+        fetch('index_message_1.wav')
+            .then(response => response.arrayBuffer())
+            .then(data => audioCtx.decodeAudioData(data))
+            .then(buffer => { scrambleBuffer = buffer; })
+            .catch(e => console.log("Erro ao carregar loop: ", e));
 
-// Certifique-se que esses arquivos de som existam na pasta também!
-const soundScramble = new Audio("index_message_1.wav");
-const soundFixed = new Audio("index_message_2.wav");
+        const soundFixed = new Audio("index_message_2.wav");
 
-let chars = "!<>-_\\/[]{}—=+*^?#";
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789§∆ΓΩΨΦΣΞ._   ';
+        let isProcessing = false;
 
-function scrambleWord(word, progress) {
-  let scrambled = "";
-  for (let i = 0; i < word.length; i++) {
-    if (Math.random() < progress) {
-      scrambled += word[i];
-    } else {
-      scrambled += chars[Math.floor(Math.random() * chars.length)];
-    }
-  }
-  return scrambled;
-}
+        function playScrambleLoop() {
+            if (!scrambleBuffer) return;
+            scrambleSource = audioCtx.createBufferSource();
+            scrambleSource.buffer = scrambleBuffer;
+            scrambleSource.loop = true;
+            scrambleSource.connect(audioCtx.destination);
+            scrambleSource.start(0);
+        }
 
-function scrambleWordsDomino(sentence, callback) {
-  let words = sentence.split(" ");
-  let progress = Array(words.length).fill(0); 
-  let iterations = 0;
-  let maxIterations = 10; 
+        function stopScrambleLoop() {
+            if (scrambleSource) {
+                scrambleSource.stop();
+                scrambleSource = null;
+            }
+        }
 
-  soundScramble.loop = true;
-  soundScramble.play().catch(() => {});
+        function runPrescript(finalText) {
+            if (isProcessing) return;
+            isProcessing = true;
 
-  let interval = setInterval(() => {
-    let displayWords = words.map((word, idx) => {
-      if (idx < iterations) {
-        return word; 
-      } else if (idx === iterations) {
-        progress[idx] += 1 / maxIterations;
-        return scrambleWord(word, progress[idx]);
-      } else {
-        return word.split("").map(_ => chars[Math.floor(Math.random() * chars.length)]).join("");
-      }
-    });
+            playScrambleLoop();
 
-    output.innerHTML = "> " + displayWords.join(" ");
-    container.scrollTop = container.scrollHeight;
+            let iteration = 0;
+            const scrambleDuration = 2000; 
+            const startTime = Date.now();
 
-    if (iterations < words.length && progress[iterations] >= 1) {
-      iterations++;
-    }
+            const interval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                
+                const result = finalText.split("").map((letter, index) => {
+                    if (elapsed >= scrambleDuration) {
+                        if (index < iteration) {
+                            return finalText[index];
+                        }
+                    }
+                    return chars[Math.floor(Math.random() * chars.length)];
+                }).join("");
 
-    if (iterations >= words.length) {
-      clearInterval(interval);
-      soundScramble.pause();
-      soundScramble.currentTime = 0;
+                outputElement.innerText = result;
 
-      soundFixed.currentTime = 0;
-      soundFixed.play().catch(() => {});
+                if (elapsed >= scrambleDuration) {
+                    iteration += 0.7; 
+                }
 
-      output.innerHTML = "> " + words.join(" ");
-      if(callback) callback();
-    }
+                if (iteration >= finalText.length) {
+                    outputElement.innerText = finalText;
+                    clearInterval(interval);
+                    
+                    stopScrambleLoop();
+                    
+                    soundFixed.currentTime = 0;
+                    soundFixed.play().catch(() => {});
 
-  }, 25); 
-}
+                    isProcessing = false;
+                }
+            }, 35);
+        }
 
-function start() {
-  let textInput = document.getElementById("inputText");
-  let text = textInput.value.trim();
-  if(!text) return;
-
-  soundScramble.play().then(() => { soundScramble.pause(); }).catch(() => {});
-  soundFixed.play().then(() => { soundFixed.pause(); }).catch(() => {});
-
-  output.innerHTML = "[INICIALIZANDO INDEX...]\n\n";
-  
-  setTimeout(() => {
-    scrambleWordsDomino(text, () => {});
-  }, 500); 
-
-  textInput.value = "";
-}
-
-function shake() {
-  let x = (Math.random() - 0.5) * 2;
-  let y = (Math.random() - 0.5) * 2;
-  container.style.transform = `translate(${x}px, ${y}px)`;
-}
-
-setInterval(() => {
-  if (Math.random() < 0.1) shake();
-}, 100);
-</script>
-
+        inputElement.addEventListener('keyup', function (e) {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                const message = this.value; 
+                if (message.trim() !== "") {
+                    // Retoma o AudioContext (necessário para navegadores modernos)
+                    if (audioCtx.state === 'suspended') {
+                        audioCtx.resume();
+                    }
+                    
+                    soundFixed.play().then(() => { soundFixed.pause(); }).catch(() => {});
+                    
+                    runPrescript(message);
+                    this.value = '';
+                    this.blur(); 
+                }
+            }
+        });
+    </script>
 </body>
 </html>
